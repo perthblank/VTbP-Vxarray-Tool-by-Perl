@@ -1,0 +1,86 @@
+Vxarray Tool by Perl
+
+Description
+	This program is designed to automate the vxarray process and deploy the vitual disks on the client machine 
+	base on iSCSI, vxarray and Perl
+	
+
+Prepare
+	0. A redhat 6.4 system
+	if have not install vxarray
+		1. Install vxarray and start SCST
+		2. Replace /etc/scst.conf with scst.conf in this project folder
+	end if
+	3. Mount disk to vxdisk path (/vdisks default)
+	4. Run 'perl backup.pl' 
+	5. Install Expect for perl
+		run cpan and enter 'install Net::SSH::Expect'
+		i.e. cpan>install Net::SSH::Expect
+	
+
+Usage
+(perl main.pl)
+	-s disk_size
+	-n disk_num
+	[-t target_num] (default is 2, should be greater than 0)
+	[	
+	-c client_addr1,client_addr2...
+	-u user1,user2...
+	-p password1,password2... (use ',' to split and no space)
+	] (if not specified, just do disk split)
+
+
+Kernel files
+    GlobalVar.pm # global variables include path and names of disk devices and targets
+    ConfigSetter.pm # get and alter the config file
+    DiskSpliter.pm # command to split disk and do refresh jobs
+    Connector # connect the client and deploy disks
+    main.pl # the entrance of this program
+
+										 
+Default configs
+	vxdisk folder path: /vdisks/
+	scst configuration file: /etc/scst.conf
+
+
+Debug 
+	All the path and name settings can be fount in GlobalVal.pm
+	
+	backup.pl # backup the original scst.conf file, for restore usage (to $scst_config_backup)
+	restore.pl # used to restore the splited disk (with $vdisk_root_path prefix)
+	check.sh # check current vxdisks
+
+
+Log
+	[Time]		[Function]
+	2015/10/9	Split Disk and deploy on Linux client
+	2015/10/10	Bug fixed, support Solaris
+
+	
+TODO
+	Support Solaris client
+	Record deployment history
+	Support remove vdisk from client
+	    delete the target from solaris
+	    # stop product, installer -stop
+	    # iscsiadm list target -S |grep -i target
+	    # iscsiadm remove static-config iqn.2015-10.com.veritas:ptgt14445160341
+	    
+FAQ
+	Cannot mount disk?
+		Check if the disk is in use, formatting it if there's still error
+	fallocate: Operation not supported?
+		Check if the disk format is ext4
+	Error: cannot add target
+		Check if target_driver is iscsi (in scst.conf)
+	Multiple target set but cannot be treat as multi-path
+		Make sure the content of each target is the same
+	What's more
+		iscsi did not support '_' well which should be avoid when naming target. Use '-' instead
+
+
+
+Ref
+1. http://docs.oracle.com/cd/E37934_01/html/E36727/iscsi-4.html
+2. https://confluence.community.veritas.com/display/IRO/Using+VxArray+Configuration+file
+3. http://blog.sina.com.cn/s/blog_8288e7f901013m3n.html
