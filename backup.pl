@@ -5,7 +5,8 @@ use warnings;
 use GlobalVar;
 
 my @cmds = (
-	"cp $scst_config_file  $scst_config_backup"
+	"cp scst.conf.backup /etc/scst.conf.backup",
+	"perl restore.pl"
 );
 
 for(my $i = 0; $i<scalar @cmds; $i++){

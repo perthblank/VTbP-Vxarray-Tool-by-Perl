@@ -17,6 +17,14 @@ my $target_num = $default_target_num;
 my $client_addr;
 my $client_usr;
 my $client_pwd;
+my $targets_for_remove;
+
+
+my $DO_SPLIT = 0;
+my $RM_DEPLOY = 1;
+my $RM_LOCAL = 2;
+
+my $MODE = -1;
 
 my @targets;
 
@@ -24,35 +32,50 @@ sub init{
 	parse();
 }
 
+sub setMode{
+	my $t = shift;
+	if($MODE != -1 && $MODE != $t){
+		print "Invalid options\n";
+		exit 1;
+	}
+	$MODE = $t;
+}
+
 sub getArgv{
 	
 	my %opts;
-	getopts('s:n:t:c:u:p:',\%opts);
+	getopts('s:n:t:c:u:p:rq:',\%opts);
 	foreach my $k ( keys %opts){
 		switch($k){
 			case "s"{
-				print "get s ".$opts{$k}."\n";
+				setMode($DO_SPLIT);
 				$disk_size = $opts{$k};	
 			}	
 			case "n"{
-				print "get n ".$opts{$k}."\n";
 				$disk_num = $opts{$k};	
+				setMode($DO_SPLIT);
 			}
 			case "t"{
-				print "get t ".$opts{$k}."\n";
 				$target_num = $opts{$k};	
+				setMode($DO_SPLIT);
 			}
 			case "c"{
-				print "get c ".$opts{$k}."\n";
 				$client_addr = $opts{$k};	
 			}
 			case "u"{
-				print "get u ".$opts{$k}."\n";
 				$client_usr = $opts{$k};	
 			}
 			case "p"{
-				print "get pwd ".$opts{$k}."\n";
 				$client_pwd = $opts{$k};	
+			}
+			case "r"{
+				print "remove deployment\n";
+				setMode($RM_DEPLOY);
+			}
+			case "q"{
+				print "remove local disks\n";	
+				$targets_for_remove = $opts{$k};
+				setMode($RM_LOCAL);
 			}
 			else{
 				print "invalid option $k\n";
@@ -61,15 +84,6 @@ sub getArgv{
 		
 		}
 	}
-
-	if(
-		!defined($disk_size)|| !defined($disk_num) 
-	){
-		print "argument invalid!\n";
-		exit 1;
-	}
-
-	return 1;
 
 }
 
@@ -80,7 +94,13 @@ sub doSplit{
 	my ($sec,$min,$hour,$day,$mon,$year,$wday,$yday,$isdst) = localtime();   
 	$year += 1900;   
 	$mon++;
- 	my $monthStr = "$year-$mon";   
+	my $monthStr;
+	if($mon<10){
+ 		$monthStr= "$year-0$mon";   
+	}
+	else{
+ 		$monthStr= "$year-$mon";   
+	}
 	
 	for(my $i = 0; $i<$disk_num; $i++){
 		my $dname = $device_name_prefix.$timeid.$i;
@@ -89,7 +109,7 @@ sub doSplit{
 		addDevice($dname,$dpath.$filename);
 		splitDisk($dpath,$filename,$disk_size);	
 		push @disks,$dname;	
-		print $dpath."\n";
+		print "new disk: $dname\n";
 	}
 
 	for(my $i = 0; $i<$target_num; $i++){
@@ -104,8 +124,6 @@ sub doSplit{
 
 
 sub deployClient{
-	print " $client_addr\n";
-	print " $client_usr\n";
 
 	my @addrs = split(/,/,$client_addr);
 	my @usrs = split(/,/,$client_usr);
@@ -116,17 +134,27 @@ sub deployClient{
 		exit 1;
 	}
 
-	for(my $i = 0; $i<scalar @addrs; $i++){
-		doConnect($addrs[$i],$usrs[$i],$pwds[$i],\@targets);
+	if($MODE == 1){
+		for(my $i = 0; $i<scalar @addrs; $i++){
+			print "removing vdisk of $addrs[$i],$usrs[$i],$pwds[$i]...\n";
+			doConnect($addrs[$i],$usrs[$i],$pwds[$i]);
+		}
+	}
+	else{
+		for(my $i = 0; $i<scalar @addrs; $i++){
+			print "deploying $addrs[$i],$usrs[$i],$pwds[$i]...\n";
+			doConnect($addrs[$i],$usrs[$i],$pwds[$i],\@targets);
+		}
 	}
 }
+
 
 sub printTargets{
 
 	print "\n=====================================\n";
 	print "Targets:\n";
 	for(my $i = 0; $i<scalar @targets; $i++){
-		print @targets[$i],"\n";
+		print $targets[$i],"\n";
 	}
 	print "Server IP:\n";
 	print get_ip_address("eth0");
@@ -134,16 +162,17 @@ sub printTargets{
 
 }
 
+sub splitNDeploy{
 
-sub main{
-	getArgv();
 	init();
+		
 	doSplit();
+
 	generate();
+
 	refreshDiskConfig(\@disks);
 
 	printTargets();
-
 
 	if(
 		defined($client_addr)&& 
@@ -151,7 +180,67 @@ sub main{
 	{
 		deployClient();
 	}
+
+}
+
+sub removeLocal{
+
+	init();
+
+	my @tnames = split(/,/,$targets_for_remove);
+	for(my $i = 0; $i<scalar @tnames; $i++){
+		removeTarget($tnames[$i]);
+	}
+
+	generate();
+
+	refreshDiskConfig();
+}
+
+sub main{
+
+	getArgv();
 	
+	switch($MODE){
+
+		case 0{
+
+			if(
+				!defined($disk_size)|| !defined($disk_num) 
+			){
+				print "argument invalid!\n";
+				exit 1;
+			}
+
+			splitNDeploy();
+
+		}
+		case 1{
+			if(
+				!defined($client_addr) || 
+				!defined($client_usr) || !defined($client_pwd))
+			{		
+				print "not enough parameter for removing\n";	
+				exit 1;
+			}
+			
+			deployClient();
+		}	
+		case 2{
+			if(!defined($targets_for_remove))
+			{
+				print "not enough parameter for removing\n";	
+				exit 1;
+			}
+			removeLocal();	
+		}
+		else {
+			print "argument invalid!\n";
+			exit 1;
+		}
+
+	}
+
 }
 
 

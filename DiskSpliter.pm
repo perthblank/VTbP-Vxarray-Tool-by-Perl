@@ -41,9 +41,11 @@ sub refreshDiskConfig{
 	}
 
 	my $disksref = shift;
-	for(my $i = 0; $i < scalar @{ $disksref }; $i++){
-		my $dname = $$disksref[$i];
-		system("./emc.sh $dname");
+	if(defined($disksref)){
+		for(my $i = 0; $i < scalar @{ $disksref }; $i++){
+			my $dname = $$disksref[$i];
+			system("./emc.sh $dname");
+		}
 	}
 }
 

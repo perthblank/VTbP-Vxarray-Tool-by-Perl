@@ -6,6 +6,7 @@ package ConfigSetter;
 use strict;
 use warnings;
 use GlobalVar;
+use Data::Dumper;
 
 require Exporter;
 
@@ -15,6 +16,7 @@ use vars qw(@ISA @EXPORT @EXPORT_OK);
 @EXPORT = qw(
 		addDevice 
 		addTarget
+		removeTarget
 		generate	
 		parse
 		);
@@ -134,8 +136,40 @@ sub parseDEVICE{
 	}
 	nextline();
 
-	#print $device," ",$path, "\n";
+}
 
+sub getPrefix{
+
+	my $tname = shift;
+
+	return substr $tname,0,length($tname)-1;
+}
+
+sub removeTarget{
+	my $tname = shift;
+
+	if(!defined($targets{$tname})){
+		print "Cannot find target $tname\n";
+		return;
+	}
+
+	for(my $i=0; $i<scalar @{$targets{$tname}}; $i++){
+		delete $devices{${$targets{$tname}}[$i]};
+	}
+
+	#common prefix
+
+	my $pre = getPrefix($tname);
+	
+	foreach my $tname2 (keys %targets){
+		#delete multi-path
+		if(getPrefix($tname2) eq $pre){
+			delete $targets{$tname2};
+		}
+	}
+
+	delete $targets{$tname};
+	
 }
 
 sub parseTARGET_DRIVER{

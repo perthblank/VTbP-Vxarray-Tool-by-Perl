@@ -1,0 +1,6 @@
+HANDLER vdisk_fileio {
+}
+
+
+TARGET_DRIVER iscsi {
+}
