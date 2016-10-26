@@ -67,7 +67,6 @@ Log
 
 	
 TODO
-	Support Solaris client
 	Record deployment history
 	Support remove vdisk from client
 	    delete the target from solaris
@@ -82,10 +81,10 @@ FAQ
 		Check if the disk format is ext4
 	Error: cannot add target
 		Check if target_driver is iscsi (in scst.conf)
-	添加了多个target却无法识别为多路径
-		确保每个target的内容是一样的
+	Cannot recognize multi-path
+		Make sure the target is the same
 	What's more
-		iscsi对下划线'_'的支持不是很好，命名时避免使用，可以用'-'代替
+		Donnot include '_' (underline) in naming
 
 
 
