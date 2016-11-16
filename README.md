@@ -1,8 +1,7 @@
 # Vxarray Tool by Perl
 
 ### Description
-This program is designed to automate the vxarray process and deploy the vitual disks on the client machine 
-	base on iSCSI, vxarray and Perl
+These scripts are designed to automate the process of vxarray and give management of virtual disks spliting and deployment, base on iSCSI, vxarray and Perl
 	
 
 ### Prepare
